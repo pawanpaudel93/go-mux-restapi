@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/pawanpaudel93/go-rest-api/models"
+	"github.com/pawanpaudel93/go-mux-restapi/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

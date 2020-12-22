@@ -1,4 +1,4 @@
-module github.com/pawanpaudel93/go-rest-api
+module github.com/pawanpaudel93/go-mux-restapi
 
 go 1.15
 

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/pawanpaudel93/go-rest-api/controller"
+	"github.com/pawanpaudel93/go-mux-restapi/controller"
 )
 
 func main() {
