@@ -6,19 +6,24 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"github.com/pawanpaudel93/go-mux-restapi/controller"
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 	router := mux.NewRouter()
 
 	controller.InitDatabase()
 
-	router.HandleFunc("/resources", controller.GetResources).Methods("GET")
-	router.HandleFunc("/resources/{id}", controller.GetResource).Methods("GET")
-	router.HandleFunc("/resources", controller.CreateResource).Methods("POST")
-	router.HandleFunc("/resources/{id}", controller.UpdateResource).Methods("PUT")
-	router.HandleFunc("/resources/{id}", controller.DeleteResource).Methods("DELETE")
+	router.HandleFunc("/books", controller.GetBooks).Methods("GET")
+	router.HandleFunc("/books/{id}", controller.GetBook).Methods("GET")
+	router.HandleFunc("/books", controller.CreateBook).Methods("POST")
+	router.HandleFunc("/books/{id}", controller.UpdateBook).Methods("PUT")
+	router.HandleFunc("/books/{id}", controller.DeleteBook).Methods("DELETE")
 
 	srv := &http.Server{
 		Handler: router,

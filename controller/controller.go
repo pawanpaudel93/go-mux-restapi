@@ -1,65 +1,138 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
+	"github.com/pawanpaudel93/go-mux-restapi/helper"
 	"github.com/pawanpaudel93/go-mux-restapi/models"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var db *gorm.DB
-var err error
+var client *mongo.Client
+var collection *mongo.Collection
 
 func InitDatabase() {
-	dsn := "host=localhost user=gorm password=gorm dbname=gorm sslmode=disable"
-	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	client = helper.ConnectDB()
+	collection = client.Database(os.Getenv("DATABASE_NAME")).Collection("books")
+}
+
+func GetBooks(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var books []models.Book
+
+	// collection := client.Database(os.Getenv("DATABASE_NAME")).Collection("books")
+	cursor, err := collection.Find(context.TODO(), bson.M{})
 
 	if err != nil {
-		panic("Failed to connect to database")
+		helper.GetError(err, w)
+		return
 	}
-	db.AutoMigrate(&models.Resource{})
+	defer cursor.Close(context.TODO())
+
+	for cursor.Next(context.TODO()) {
+		var book models.Book
+		cursor.Decode(&book)
+		books = append(books, book)
+	}
+
+	if err := cursor.Err(); err != nil {
+		helper.GetError(err, w)
+	}
+	json.NewEncoder(w).Encode(books)
 }
 
-func GetResources(w http.ResponseWriter, r *http.Request) {
-	var resources []models.Resource
-	db.Find(&resources)
-	json.NewEncoder(w).Encode(&resources)
-}
+func GetBook(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
-func GetResource(w http.ResponseWriter, r *http.Request) {
+	var book models.Book
+
 	params := mux.Vars(r)
-	var resource models.Resource
-	db.First(&resource, params["id"])
-	json.NewEncoder(w).Encode(&resource)
+
+	id, _ := primitive.ObjectIDFromHex(params["id"])
+
+	filter := bson.M{"_id": id}
+	// collection := client.Database(os.Getenv("DATABASE_NAME")).Collection("books")
+	err := collection.FindOne(context.TODO(), filter).Decode(&book)
+
+	if err != nil {
+		helper.GetError(err, w)
+		return
+	}
+	json.NewEncoder(w).Encode(book)
 }
 
-func CreateResource(w http.ResponseWriter, r *http.Request) {
-	var resource models.Resource
-	json.NewDecoder(r.Body).Decode(&resource)
-	db.Create(&resource)
-	json.NewEncoder(w).Encode(&resource)
+func CreateBook(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var book models.Book
+
+	_ = json.NewDecoder(r.Body).Decode(&book)
+	// collection := client.Database(os.Getenv("DATABASE_NAME")).Collection("books")
+	result, err := collection.InsertOne(context.TODO(), book)
+
+	if err != nil {
+		helper.GetError(err, w)
+		return
+	}
+	json.NewEncoder(w).Encode(result)
 }
 
-func UpdateResource(w http.ResponseWriter, r *http.Request) {
+func UpdateBook(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	params := mux.Vars(r)
-	var resource models.Resource
-	var updateData map[string]interface{}
-	json.NewDecoder(r.Body).Decode(&updateData)
-	db.First(&resource, params["id"])
-	db.Model(&resource).Updates(updateData)
-	json.NewEncoder(w).Encode(&resource)
+
+	id, _ := primitive.ObjectIDFromHex(params["id"])
+
+	var book models.Book
+
+	filter := bson.M{"_id": id}
+
+	_ = json.NewDecoder(r.Body).Decode(&book)
+
+	update := bson.D{
+		{"$set", bson.D{
+			{"isbn", book.ISBN},
+			{"title", book.Title},
+			{"author", bson.D{
+				{"firstname", book.Author.FirstName},
+				{"lastname", book.Author.LastName},
+			}},
+		}},
+	}
+	// collection := client.Database(os.Getenv("DATABASE_NAME")).Collection("books")
+	err := collection.FindOneAndUpdate(context.TODO(), filter, update).Decode(&book)
+	if err != nil {
+		helper.GetError(err, w)
+		return
+	}
+	book.ID = id
+	json.NewEncoder(w).Encode(book)
 }
 
-func DeleteResource(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	var resource models.Resource
-	db.First(&resource, params["id"])
-	db.Delete(&resource)
+func DeleteBook(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
-	var resources []models.Resource
-	db.Find(&resources)
-	json.NewEncoder(w).Encode(&resources)
+	var params = mux.Vars(r)
+
+	id, err := primitive.ObjectIDFromHex(params["id"])
+
+	filter := bson.M{"_id": id}
+
+	// collection := client.Database(os.Getenv("DATABASE_NAME")).Collection("books")
+	deleteResult, err := collection.DeleteOne(context.TODO(), filter)
+
+	if err != nil {
+		helper.GetError(err, w)
+		return
+	}
+
+	json.NewEncoder(w).Encode(deleteResult)
 }

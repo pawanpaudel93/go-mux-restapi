@@ -1,16 +1,14 @@
 package models
 
-import (
-	"github.com/lib/pq"
-	"gorm.io/gorm"
-)
+import "go.mongodb.org/mongo-driver/bson/primitive"
 
-type Resource struct {
-	gorm.Model
-
-	Link        string
-	Name        string
-	Author      string
-	Description string
-	Tags        pq.StringArray `gorm:"type:varchar(64)[]"`
+type Author struct {
+	FirstName string `json:"firstname, omitempty" bson:"firstname,omitempty"`
+	LastName  string `json:"lastname,omitempty" bson:"lastname, omitempty"`
+}
+type Book struct {
+	ID     primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	ISBN   string             `json:"isbn,omitempty" bson:"isbn,omitempty"`
+	Title  string             `json:"title" bson: "title, omitempty"`
+	Author *Author            `json:"author" bson: "author,omitempty"`
 }
